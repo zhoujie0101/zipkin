@@ -68,11 +68,13 @@ public class ZipkinElasticsearchHttpStorageAutoConfiguration {
   ElasticsearchHttpStorage.Builder esHttpBuilder(
     ZipkinElasticsearchHttpStorageProperties elasticsearch,
     @Qualifier("zipkinElasticsearchHttp") OkHttpClient client,
+    @Value("${zipkin.query.lookback:86400000}") int namesLookback,
     @Value("${zipkin.storage.strict-trace-id:true}") boolean strictTraceId,
-    @Value("${zipkin.query.lookback:86400000}") int namesLookback) {
+    @Value("${zipkin.storage.search-enabled:true}") boolean searchEnabled) {
     return elasticsearch.toBuilder(client)
+      .namesLookback(namesLookback)
       .strictTraceId(strictTraceId)
-      .namesLookback(namesLookback);
+      .searchEnabled(searchEnabled);
   }
 
   static final class HttpLoggingSet implements Condition {

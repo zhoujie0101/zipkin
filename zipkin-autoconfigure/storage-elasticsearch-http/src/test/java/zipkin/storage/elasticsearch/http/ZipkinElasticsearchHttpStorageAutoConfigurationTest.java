@@ -398,7 +398,6 @@ public class ZipkinElasticsearchHttpStorageAutoConfigurationTest {
     context = new AnnotationConfigApplicationContext();
     addEnvironment(context,
       "zipkin.storage.type:elasticsearch",
-      "zipkin.storage.elasticsearch.hosts:http://host1:9200",
       "zipkin.storage.elasticsearch.legacy-reads-enabled:false");
     context.register(PropertyPlaceholderAutoConfiguration.class,
       ZipkinElasticsearchOkHttpAutoConfiguration.class,
@@ -406,6 +405,21 @@ public class ZipkinElasticsearchHttpStorageAutoConfigurationTest {
     context.refresh();
 
     assertThat(context.getBean(ElasticsearchHttpStorage.class).legacyReadsEnabled)
+      .isFalse();
+  }
+
+  @Test
+  public void searchEnabled_false() {
+    context = new AnnotationConfigApplicationContext();
+    addEnvironment(context,
+      "zipkin.storage.type:elasticsearch",
+      "zipkin.storage.search-enabled:false");
+    context.register(PropertyPlaceholderAutoConfiguration.class,
+      ZipkinElasticsearchOkHttpAutoConfiguration.class,
+      ZipkinElasticsearchHttpStorageAutoConfiguration.class);
+    context.refresh();
+
+    assertThat(context.getBean(ElasticsearchHttpStorage.class).searchEnabled)
       .isFalse();
   }
 

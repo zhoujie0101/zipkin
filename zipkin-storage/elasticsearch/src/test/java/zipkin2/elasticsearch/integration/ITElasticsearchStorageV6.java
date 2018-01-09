@@ -11,36 +11,36 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package zipkin2.storage.cassandra.integration;
+package zipkin2.elasticsearch.integration;
 
+import java.io.IOException;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
+import zipkin2.elasticsearch.ElasticsearchStorage;
 import zipkin2.storage.StorageComponent;
-import zipkin2.storage.cassandra.CassandraStorage;
-import zipkin2.storage.cassandra.CassandraStorageRule;
 
-import static zipkin2.storage.cassandra.InternalForTests.dropKeyspace;
-import static zipkin2.storage.cassandra.InternalForTests.keyspace;
+import static zipkin2.elasticsearch.integration.ElasticsearchStorageRule.index;
 
 @RunWith(Enclosed.class)
-public class ITCassandraStorage {
+public class ITElasticsearchStorageV6 {
 
-  static CassandraStorageRule classRule() {
-    return new CassandraStorageRule("openzipkin/zipkin-cassandra:2.4.1", "test_cassandra3");
+  static ElasticsearchStorageRule classRule() {
+    return new ElasticsearchStorageRule("openzipkin/zipkin-elasticsearch6:2.4.1",
+      "test_elasticsearch3");
   }
 
   public static class ITSearchEnabledFalse extends zipkin2.storage.ITSearchEnabledFalse {
-    @ClassRule public static CassandraStorageRule backend = classRule();
+    @ClassRule public static ElasticsearchStorageRule backend = classRule();
     @Rule public TestName testName = new TestName();
 
-    CassandraStorage storage;
+    ElasticsearchStorage storage;
 
     @Before public void connect() {
-      storage = backend.computeStorageBuilder().keyspace(keyspace(testName))
+      storage = backend.computeStorageBuilder().index(index(testName))
         .searchEnabled(false).build();
     }
 
@@ -48,8 +48,8 @@ public class ITCassandraStorage {
       return storage;
     }
 
-    @Before @Override public void clear() {
-      dropKeyspace(backend.session(), keyspace(testName));
+    @Before @Override public void clear() throws IOException {
+      storage.clear();
     }
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 The OpenZipkin Authors
+ * Copyright 2015-2018 The OpenZipkin Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -48,7 +48,7 @@ final class ElasticsearchSpanStore implements SpanStore {
   final SearchCallFactory search;
   final String[] allSpanIndices;
   final IndexNameFormatter indexNameFormatter;
-  final boolean strictTraceId;
+  final boolean strictTraceId, searchEnabled;
   final int namesLookback;
 
   ElasticsearchSpanStore(ElasticsearchStorage es) {
@@ -56,10 +56,13 @@ final class ElasticsearchSpanStore implements SpanStore {
     this.allSpanIndices = new String[] {es.indexNameFormatter().formatType(SPAN)};
     this.indexNameFormatter = es.indexNameFormatter();
     this.strictTraceId = es.strictTraceId();
+    this.searchEnabled = es.searchEnabled();
     this.namesLookback = es.namesLookback();
   }
 
   @Override public Call<List<List<Span>>> getTraces(QueryRequest request) {
+    if (!searchEnabled) return Call.emptyList();
+
     long endMillis = request.endTs();
     long beginMillis = Math.max(endMillis - request.lookback(), EARLIEST_MS);
 
@@ -143,6 +146,8 @@ final class ElasticsearchSpanStore implements SpanStore {
   }
 
   @Override public Call<List<String>> getServiceNames() {
+    if (!searchEnabled) return Call.emptyList();
+
     long endMillis = System.currentTimeMillis();
     long beginMillis = endMillis - namesLookback;
 
@@ -161,6 +166,8 @@ final class ElasticsearchSpanStore implements SpanStore {
   }
 
   @Override public Call<List<String>> getSpanNames(String serviceName) {
+    if (!searchEnabled) return Call.emptyList();
+
     if ("".equals(serviceName)) return Call.emptyList();
 
     long endMillis = System.currentTimeMillis();

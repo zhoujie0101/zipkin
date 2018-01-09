@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 The OpenZipkin Authors
+ * Copyright 2015-2018 The OpenZipkin Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -27,6 +27,7 @@ import zipkin2.Callback;
 import zipkin2.Endpoint;
 import zipkin2.Span;
 import zipkin2.Span.Kind;
+import zipkin2.TestObjects;
 import zipkin2.codec.SpanBytesDecoder;
 import zipkin2.codec.SpanBytesEncoder;
 import zipkin2.internal.Nullable;
@@ -34,6 +35,7 @@ import zipkin2.internal.Nullable;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
+import static zipkin2.TestObjects.TODAY;
 import static zipkin2.elasticsearch.ElasticsearchSpanConsumer.prefixWithTimestampMillisAndQuery;
 
 public class ElasticsearchSpanConsumerTest {
@@ -67,12 +69,12 @@ public class ElasticsearchSpanConsumerTest {
     es.enqueue(new MockResponse());
 
     Span span = Span.newBuilder().traceId("20").id("20").name("get")
-      .timestamp(TestObjects.TODAY * 1000).build();
+      .timestamp(TODAY * 1000).build();
 
     accept(span);
 
     assertThat(es.takeRequest().getBody().readUtf8())
-      .contains("\n{\"timestamp_millis\":" + Long.toString(TestObjects.TODAY) + ",\"traceId\":");
+      .contains("\n{\"timestamp_millis\":" + Long.toString(TODAY) + ",\"traceId\":");
   }
 
   @Test public void prefixWithTimestampMillisAndQuery_skipsWhenNoData() throws Exception {
@@ -125,7 +127,7 @@ public class ElasticsearchSpanConsumerTest {
 
   @Test public void prefixWithTimestampMillisAndQuery_readable() throws Exception {
     Span span = Span.newBuilder().traceId("20").id("20").name("get")
-      .timestamp(TestObjects.TODAY * 1000).build();
+      .timestamp(TODAY * 1000).build();
 
     assertThat(
       SpanBytesDecoder.JSON_V2.decodeOne(prefixWithTimestampMillisAndQuery(span, span.timestamp())))

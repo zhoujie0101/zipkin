@@ -120,9 +120,11 @@ public class ZipkinServerConfiguration {
   static class InMemoryConfiguration {
     @Bean StorageComponent storage(
       @Value("${zipkin.storage.strict-trace-id:true}") boolean strictTraceId,
+      @Value("${zipkin.storage.search-enabled:true}") boolean searchEnabled,
       @Value("${zipkin.storage.mem.max-spans:500000}") int maxSpans) {
       return V2StorageComponent.create(InMemoryStorage.newBuilder()
         .strictTraceId(strictTraceId)
+        .searchEnabled(searchEnabled)
         .maxSpanCount(maxSpans)
         .build());
     }
