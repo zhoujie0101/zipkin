@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 The OpenZipkin Authors
+ * Copyright 2015-2018 The OpenZipkin Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -15,12 +15,8 @@ package zipkin2.storage.cassandra;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.ProtocolVersion;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.TypeCodec;
-import com.datastax.driver.core.exceptions.InvalidTypeException;
 import com.datastax.driver.mapping.annotations.UDT;
 import com.google.common.base.Preconditions;
 import com.google.common.io.CharStreams;
@@ -30,7 +26,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -41,7 +36,7 @@ import zipkin2.Endpoint;
 
 final class Schema {
   private static final Logger LOG = LoggerFactory.getLogger(Schema.class);
-  public static final Charset UTF_8 = Charset.forName("UTF-8");
+  static final Charset UTF_8 = Charset.forName("UTF-8");
 
   static final String TABLE_SPAN = "span";
   static final String TABLE_TRACE_BY_SERVICE_SPAN = "trace_by_service_span";
@@ -70,18 +65,10 @@ final class Schema {
               ConsistencyLevel.ONE == cl,
               "Do not define `local_dc` and use SimpleStrategy");
     }
-    String compactionClass =
-        keyspaceMetadata.getTable("span").getOptions().getCompaction().get("class");
-
-    return new Metadata(compactionClass);
+    return new Metadata();
   }
 
   static final class Metadata {
-    final String compactionClass;
-
-    Metadata(String compactionClass) {
-      this.compactionClass = compactionClass;
-    }
   }
 
   static KeyspaceMetadata getKeyspaceMetadata(Session session) {
@@ -219,36 +206,6 @@ final class Schema {
 
     Annotation toAnnotation() {
       return Annotation.create(ts, v);
-    }
-  }
-
-  static final class TypeCodecImpl<T> extends TypeCodec<T> {
-
-    private final TypeCodec<T> codec;
-
-    public TypeCodecImpl(DataType cqlType, Class<T> javaClass, TypeCodec<T> codec) {
-      super(cqlType, javaClass);
-      this.codec = codec;
-    }
-
-    @Override
-    public ByteBuffer serialize(T t, ProtocolVersion pv) throws InvalidTypeException {
-      return codec.serialize(t, pv);
-    }
-
-    @Override
-    public T deserialize(ByteBuffer bb, ProtocolVersion pv) throws InvalidTypeException {
-      return codec.deserialize(bb, pv);
-    }
-
-    @Override
-    public T parse(String string) throws InvalidTypeException {
-      return codec.parse(string);
-    }
-
-    @Override
-    public String format(T t) throws InvalidTypeException {
-      return codec.format(t);
     }
   }
 }

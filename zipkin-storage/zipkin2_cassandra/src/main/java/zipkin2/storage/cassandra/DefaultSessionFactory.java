@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 The OpenZipkin Authors
+ * Copyright 2015-2018 The OpenZipkin Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -15,11 +15,9 @@ package zipkin2.storage.cassandra;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.QueryLogger;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.TypeCodec;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
@@ -35,7 +33,6 @@ import java.util.List;
 import java.util.Set;
 import zipkin2.storage.cassandra.Schema.AnnotationUDT;
 import zipkin2.storage.cassandra.Schema.EndpointUDT;
-import zipkin2.storage.cassandra.Schema.TypeCodecImpl;
 
 import static zipkin2.storage.cassandra.Schema.DEFAULT_KEYSPACE;
 
@@ -76,22 +73,13 @@ final class DefaultSessionFactory implements CassandraStorage.SessionFactory {
   }
 
   private static void initializeUDTs(Session session) {
-    Schema.ensureExists(DEFAULT_KEYSPACE + "_udts", session);
-    MappingManager mapping = new MappingManager(session);
-
     // The UDTs are hardcoded against the zipkin keyspace.
     // If a different keyspace is being used the codecs must be re-applied to this different keyspace
-    TypeCodec<EndpointUDT> endpointCodec = mapping.udtCodec(EndpointUDT.class);
-    TypeCodec<AnnotationUDT> annoCodec = mapping.udtCodec(AnnotationUDT.class);
-
-    KeyspaceMetadata keyspace =
-        session.getCluster().getMetadata().getKeyspace(session.getLoggedKeyspace());
-
-    session.getCluster().getConfiguration().getCodecRegistry()
-      .register(
-        new TypeCodecImpl<>(keyspace.getUserType("endpoint"), EndpointUDT.class, endpointCodec))
-      .register(
-        new TypeCodecImpl<>(keyspace.getUserType("annotation"), AnnotationUDT.class, annoCodec));
+    Schema.ensureExists(DEFAULT_KEYSPACE + "_udts", session);
+    MappingManager mapping = new MappingManager(session);
+    String keyspace = session.getLoggedKeyspace();
+    mapping.mapper(EndpointUDT.class, keyspace);
+    mapping.mapper(AnnotationUDT.class, keyspace);
   }
 
   // Visible for testing
