@@ -51,6 +51,10 @@ public class ElasticsearchSpanConsumerTest {
   /** gets the index template so that each test doesn't have to */
   @Before
   public void ensureIndexTemplate() throws Exception {
+    ensureIndexTemplates(storage);
+  }
+
+  private void ensureIndexTemplates(ElasticsearchStorage storage) throws InterruptedException {
     es.enqueue(new MockResponse().setBody("{\"version\":{\"number\":\"6.0.0\"}}"));
     es.enqueue(new MockResponse()); // get span template
     es.enqueue(new MockResponse()); // get dependency template
@@ -249,6 +253,55 @@ public class ElasticsearchSpanConsumerTest {
     assertThat(es.takeRequest().getBody().readByteString().utf8()).contains(
       "{\"index\":{\"_index\":\"zipkin:span-1971-01-01\",\"_type\":\"span\"}}"
     );
+  }
+
+  /** Much simpler template which doesn't write the timestamp_millis field */
+  @Test
+  public void searchDisabled_simplerIndexTemplate() throws Exception {
+    try (ElasticsearchStorage storage = ElasticsearchStorage.newBuilder()
+      .hosts(this.storage.hostsSupplier().get())
+      .searchEnabled(false).build()) {
+
+      es.enqueue(new MockResponse().setBody("{\"version\":{\"number\":\"6.0.0\"}}"));
+      es.enqueue(new MockResponse().setResponseCode(404)); // get span template
+      es.enqueue(new MockResponse()); // put span template
+      es.enqueue(new MockResponse()); // get dependency template
+      storage.ensureIndexTemplates();
+      es.takeRequest(); // get version
+      es.takeRequest(); // get span template
+
+      assertThat(es.takeRequest().getBody().readUtf8()) // put span template
+        .contains(""
+          + "  \"mappings\": {\n"
+          + "    \"_default_\": {  },\n"
+          + "    \"span\": {\n"
+          + "      \"properties\": {\n"
+          + "        \"traceId\": { \"type\": \"keyword\", \"norms\": false },\n"
+          + "        \"annotations\": { \"enabled\": false },\n"
+          + "        \"tags\": { \"enabled\": false }\n"
+          + "      }\n"
+          + "    }\n"
+          + "  }\n");
+    }
+  }
+
+  /** Less overhead as a span json isn't rewritten to include a millis timestamp */
+  @Test public void searchDisabled_doesntAddTimestampMillis() throws Exception {
+    try (ElasticsearchStorage storage = ElasticsearchStorage.newBuilder()
+      .hosts(this.storage.hostsSupplier().get())
+      .searchEnabled(false).build()) {
+
+      ensureIndexTemplates(storage);
+      es.enqueue(new MockResponse()); // for the bulk request
+
+      Span span = Span.newBuilder().traceId("20").id("20").name("get")
+        .timestamp(TODAY * 1000).build();
+
+      storage.spanConsumer().accept(asList(span)).execute();
+
+      assertThat(es.takeRequest().getBody().readUtf8())
+        .doesNotContain("timestamp_millis");
+    }
   }
 
   void accept(Span... spans) throws Exception {

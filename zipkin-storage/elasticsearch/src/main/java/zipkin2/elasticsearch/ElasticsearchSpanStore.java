@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -208,7 +207,7 @@ final class ElasticsearchSpanStore implements SpanStore {
         ? span.traceId()
         : span.traceId().substring(16);
       if (!groupedByTraceId.containsKey(traceId)) {
-        groupedByTraceId.put(traceId, new LinkedList<>());
+        groupedByTraceId.put(traceId, new ArrayList<>());
       }
       groupedByTraceId.get(traceId).add(span);
     }
