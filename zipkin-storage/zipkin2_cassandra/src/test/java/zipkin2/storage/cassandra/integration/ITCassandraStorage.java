@@ -13,16 +13,20 @@
  */
 package zipkin2.storage.cassandra.integration;
 
+import com.datastax.driver.core.KeyspaceMetadata;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import zipkin2.storage.StorageComponent;
 import zipkin2.storage.cassandra.CassandraStorage;
 import zipkin2.storage.cassandra.CassandraStorageRule;
+import zipkin2.storage.cassandra.InternalForTests;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static zipkin2.storage.cassandra.InternalForTests.dropKeyspace;
 import static zipkin2.storage.cassandra.InternalForTests.keyspace;
 
@@ -42,6 +46,14 @@ public class ITCassandraStorage {
     @Before public void connect() {
       storage = backend.computeStorageBuilder().keyspace(keyspace(testName))
         .searchEnabled(false).build();
+    }
+
+    @Test public void doesntCreateIndexes() {
+      KeyspaceMetadata metadata = InternalForTests.session(storage).getCluster().getMetadata()
+        .getKeyspace(keyspace(testName));
+
+      assertThat(metadata.getTable("trace_by_service_span")).isNull();
+      assertThat(metadata.getTable("span_by_service")).isNull();
     }
 
     @Override protected StorageComponent storage() {

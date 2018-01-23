@@ -84,4 +84,8 @@ public class InternalForTests {
     session.execute("DROP KEYSPACE IF EXISTS " + keyspace);
     assertThat(session.getCluster().getMetadata().getKeyspace(keyspace)).isNull();
   }
+
+  public static Session session(CassandraStorage storage) {
+    return storage.session();
+  }
 }
